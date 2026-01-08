@@ -49,12 +49,44 @@ jobs:
           
           FORCE="${{ github.event.inputs.force_update }}"
           
-          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] || [ "$FORCE" == "true" ]; then
-             echo "Update found or forced!"
+          UPDATE_NEEDED="false"
+          NEW_HASH=""
+          
+          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+             echo "Version Update found!"
+             UPDATE_NEEDED="true"
+          elif [ "$FORCE" == "true" ]; then
+             echo "Forced Update!"
+             UPDATE_NEEDED="true"
+          else
+             # Version matches, check Hash
+             echo "Version matches. Checking Hash..."
+             
+             DOWNLOAD_URL="https://codeload.github.com/stackia/rtp2httpd/tar.gz/v$NEW_VERSION"
+             curl -sL "$DOWNLOAD_URL" -o source_check.tar.gz
+             NEW_HASH_CALC=$(sha256sum source_check.tar.gz | cut -d' ' -f1)
+             rm source_check.tar.gz
+             
+             CURRENT_HASH=$(grep '^PKG_HASH:=' rtp2httpd/Makefile | cut -d= -f2)
+             
+             if [ "$NEW_HASH_CALC" != "$CURRENT_HASH" ]; then
+                echo "Hash Mismatch! Update needed."
+                echo "Old Hash: $CURRENT_HASH"
+                echo "New Hash: $NEW_HASH_CALC"
+                UPDATE_NEEDED="true"
+                NEW_HASH="$NEW_HASH_CALC"
+             else
+                echo "Hash matches. No update needed."
+             fi
+          fi
+          
+          if [ "$UPDATE_NEEDED" == "true" ]; then
              echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
              echo "update_needed=true" >> $GITHUB_OUTPUT
+             if [ -n "$NEW_HASH" ]; then
+                echo "new_hash=$NEW_HASH" >> $GITHUB_OUTPUT
+             fi
           else
-             echo "No update needed."
              echo "update_needed=false" >> $GITHUB_OUTPUT
           fi
 
@@ -62,17 +94,23 @@ jobs:
         if: steps.check.outputs.update_needed == 'true'
         run: |
           NEW_VER="${{ steps.check.outputs.new_version }}"
+          PRECALC_HASH="${{ steps.check.outputs.new_hash }}"
           
           echo "Updating Makefile to $NEW_VER..."
           
-          # Download new source to calculate hash
-          # URL format from Makefile: https://codeload.github.com/stackia/rtp2httpd/tar.gz/v$(PKG_VERSION)?
-          DOWNLOAD_URL="https://codeload.github.com/stackia/rtp2httpd/tar.gz/v$NEW_VER"
-          echo "Downloading from $DOWNLOAD_URL"
-          curl -sL "$DOWNLOAD_URL" -o source.tar.gz
+          # Download new source to calculate hash if not already done
+          if [ -z "$PRECALC_HASH" ]; then
+             DOWNLOAD_URL="https://codeload.github.com/stackia/rtp2httpd/tar.gz/v$NEW_VER"
+             echo "Downloading from $DOWNLOAD_URL"
+             curl -sL "$DOWNLOAD_URL" -o source.tar.gz
+             
+             # Calculate SHA256 Hash
+             NEW_HASH=$(sha256sum source.tar.gz | cut -d' ' -f1)
+             rm source.tar.gz
+          else
+             NEW_HASH="$PRECALC_HASH"
+          fi
           
-          # Calculate SHA256 Hash
-          NEW_HASH=$(sha256sum source.tar.gz | cut -d' ' -f1)
           echo "New Hash: $NEW_HASH"
           
           if [ -z "$NEW_HASH" ]; then
@@ -88,9 +126,6 @@ jobs:
           
           # Update PKG_HASH
           sed -i "s/^PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/" rtp2httpd/Makefile
-          
-          # Clean up
-          rm source.tar.gz
 
       - name: Commit and Push
         if: steps.check.outputs.update_needed == 'true'
