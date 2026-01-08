@@ -58,11 +58,32 @@ jobs:
           
           echo "Updating Makefile to $NEW_VER..."
           
+          # Download new source to calculate hash
+          # URL format from Makefile: https://codeload.github.com/stackia/rtp2httpd/tar.gz/v$(PKG_VERSION)?
+          DOWNLOAD_URL="https://codeload.github.com/stackia/rtp2httpd/tar.gz/v$NEW_VER"
+          echo "Downloading from $DOWNLOAD_URL"
+          curl -sL "$DOWNLOAD_URL" -o source.tar.gz
+          
+          # Calculate SHA256 Hash
+          NEW_HASH=$(sha256sum source.tar.gz | cut -d' ' -f1)
+          echo "New Hash: $NEW_HASH"
+          
+          if [ -z "$NEW_HASH" ]; then
+             echo "Failed to calculate hash."
+             exit 1
+          fi
+
           # Update PKG_VERSION
           sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/" rtp2httpd/Makefile
           
           # Reset PKG_RELEASE to 1
           sed -i "s/^PKG_RELEASE:=.*/PKG_RELEASE:=1/" rtp2httpd/Makefile
+          
+          # Update PKG_HASH
+          sed -i "s/^PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/" rtp2httpd/Makefile
+          
+          # Clean up
+          rm source.tar.gz
 
       - name: Commit and Push
         if: steps.check.outputs.update_needed == 'true'
