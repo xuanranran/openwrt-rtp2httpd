@@ -1,0 +1,84 @@
+name: "Compile The New rtp2httpd version"
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for Updates
+        id: check
+        run: |
+          # Upstream Repo (Release source)
+          API_URL="https://api.github.com/repos/stackia/rtp2httpd/releases/latest"
+          
+          # Get latest version tag (e.g., v3.5.2)
+          LATEST_TAG=$(curl -s "$API_URL" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "Failed to find latest release tag."
+            exit 1
+          fi
+          
+          # Clean version string (remove 'v' prefix if present)
+          NEW_VERSION=$(echo "$LATEST_TAG" | sed 's/^v//')
+          
+          echo "Latest Version: $NEW_VERSION"
+          
+          # Get current PKG_VERSION from Makefile
+          CURRENT_VERSION=$(grep '^PKG_VERSION:=' rtp2httpd/Makefile | cut -d= -f2)
+          
+          echo "Current Version: $CURRENT_VERSION"
+          
+          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+             echo "Update found!"
+             echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+             echo "update_needed=true" >> $GITHUB_OUTPUT
+          else
+             echo "No update needed."
+             echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Makefile
+        if: steps.check.outputs.update_needed == 'true'
+        run: |
+          NEW_VER="${{ steps.check.outputs.new_version }}"
+          
+          echo "Updating Makefile to $NEW_VER..."
+          
+          # Update PKG_VERSION
+          sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/" rtp2httpd/Makefile
+          
+          # Reset PKG_RELEASE to 1
+          sed -i "s/^PKG_RELEASE:=.*/PKG_RELEASE:=1/" rtp2httpd/Makefile
+
+      - name: Commit and Push
+        if: steps.check.outputs.update_needed == 'true'
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Add potentially modified files
+          git add rtp2httpd/Makefile
+          
+          # Commit and Push
+          git commit -m "rtp2httpd: update to ${{ steps.check.outputs.new_version }}"
+          git push origin HEAD:${{ github.ref }}
+
+      - name: Trigger Build
+        if: steps.check.outputs.update_needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build.yml
