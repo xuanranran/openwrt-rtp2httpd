@@ -5,11 +5,13 @@ on:
     branches:
       - main
       - master
-    paths-ignore:
-      - '.github/workflows/compile_rtp2httpd_version.yml'
+    paths:
+      - 'rtp2httpd/**'
+      - 'luci-app-rtp2httpd/**'
   pull_request:
-    paths-ignore:
-      - '.github/workflows/compile_rtp2httpd_version.yml'
+    paths:
+      - 'rtp2httpd/**'
+      - 'luci-app-rtp2httpd/**'
   workflow_dispatch:
 
 permissions:
