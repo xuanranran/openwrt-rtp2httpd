@@ -41,6 +41,24 @@ jobs:
             sdk_tar: "SDK.tar.zst"
             sdk_dir: "SDK"
             package_type: "ipk"
+          - name: mips-openwrt-24.10
+            arch: mips_24kc
+            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/ath79/generic/"
+            sdk_tar: "SDK.tar.zst"
+            sdk_dir: "SDK"
+            package_type: "ipk"
+          - name: mipsel-openwrt-24.10
+            arch: mipsel_24kc
+            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/ramips/mt76x8/"
+            sdk_tar: "SDK.tar.zst"
+            sdk_dir: "SDK"
+            package_type: "ipk"
+          - name: riscv64-openwrt-24.10
+            arch: riscv64
+            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/sifiveu/generic/"
+            sdk_tar: "SDK.tar.zst"
+            sdk_dir: "SDK"
+            package_type: "ipk"
 
 
           # APK Targets (Snapshots)
@@ -59,6 +77,24 @@ jobs:
           - name: armv7-SNAPSHOT
             arch: arm_cortex-a7
             sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/sunxi/cortexa7/"
+            sdk_tar: "SNAPSDK.tar.zst"
+            sdk_dir: "SNAPSDK"
+            package_type: "apk"
+          - name: mips-SNAPSHOT
+            arch: mips_24kc
+            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/ath79/generic/"
+            sdk_tar: "SNAPSDK.tar.zst"
+            sdk_dir: "SNAPSDK"
+            package_type: "apk"
+          - name: mipsel-SNAPSHOT
+            arch: mipsel_24kc
+            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/ramips/mt76x8/"
+            sdk_tar: "SNAPSDK.tar.zst"
+            sdk_dir: "SNAPSDK"
+            package_type: "apk"
+          - name: riscv64-SNAPSHOT
+            arch: riscv64
+            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/sifiveu/generic/"
             sdk_tar: "SNAPSDK.tar.zst"
             sdk_dir: "SNAPSDK"
             package_type: "apk"
