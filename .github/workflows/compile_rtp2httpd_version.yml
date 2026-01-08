@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 */12 * * *"
   workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update even if version matches'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -42,8 +47,10 @@ jobs:
           
           echo "Current Version: $CURRENT_VERSION"
           
-          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
-             echo "Update found!"
+          FORCE="${{ github.event.inputs.force_update }}"
+          
+          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] || [ "$FORCE" == "true" ]; then
+             echo "Update found or forced!"
              echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
              echo "update_needed=true" >> $GITHUB_OUTPUT
           else
