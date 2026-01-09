@@ -115,3 +115,22 @@ jobs:
           path: bin/artifacts/*
           if-no-files-found: ignore
 
+      - name: Get Version
+        id: version
+        run: |
+          VERSION=$(grep '^PKG_VERSION:=' rtp2httpd/Makefile | cut -d= -f2)
+          echo "PKG_VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') == false
+        with:
+          tag_name: "v${{ steps.version.outputs.PKG_VERSION }}"
+          name: "v${{ steps.version.outputs.PKG_VERSION }}"
+          body: |
+            rtp2httpd OpenWrt Packages
+            
+            Version: ${{ steps.version.outputs.PKG_VERSION }}
+          files: bin/artifacts/*.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
+
