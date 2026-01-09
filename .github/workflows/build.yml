@@ -8,6 +8,7 @@ on:
     paths:
       - 'rtp2httpd/**'
       - 'luci-app-rtp2httpd/**'
+      - '.github/workflows/build.yml'
   pull_request:
     paths:
       - 'rtp2httpd/**'
@@ -19,208 +20,87 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.target.name }}
+    name: Package ${{ matrix.arch }}-${{ matrix.sdk }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - name: x86_64-openwrt-24.10
-            arch: x86_64
-            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/x86/64/"
-            sdk_tar: "SDK.tar.zst"
-            sdk_dir: "SDK"
-            package_type: "ipk"
-          - name: rockchip-openwrt-24.10
-            arch: aarch64_generic
-            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/rockchip/armv8/"
-            sdk_tar: "SDK.tar.zst"
-            sdk_dir: "SDK"
-            package_type: "ipk"
-          - name: armv7-openwrt-24.10
-            arch: arm_cortex-a7
-            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/sunxi/cortexa7/"
-            sdk_tar: "SDK.tar.zst"
-            sdk_dir: "SDK"
-            package_type: "ipk"
-          - name: mips-openwrt-24.10
-            arch: mips_24kc
-            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/ath79/generic/"
-            sdk_tar: "SDK.tar.zst"
-            sdk_dir: "SDK"
-            package_type: "ipk"
-          - name: mipsel-openwrt-24.10
-            arch: mipsel_24kc
-            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/ramips/mt76x8/"
-            sdk_tar: "SDK.tar.zst"
-            sdk_dir: "SDK"
-            package_type: "ipk"
-          - name: riscv64-openwrt-24.10
-            arch: riscv64
-            sdk_url: "https://downloads.immortalwrt.org/releases/24.10.4/targets/sifiveu/generic/"
-            sdk_tar: "SDK.tar.zst"
-            sdk_dir: "SDK"
-            package_type: "ipk"
+        arch:
+          - x86_64
+          - aarch64_cortex-a53
+          - aarch64_cortex-a72
+          - aarch64_cortex-a76
+          - aarch64_generic
+          - arm_cortex-a5_vfpv4
+          - arm_cortex-a7
+          - arm_cortex-a7_neon-vfpv4
+          - arm_cortex-a7_vfpv4
+          - arm_cortex-a9
+          - arm_cortex-a9_neon
+          - arm_cortex-a9_vfpv3-d16
+          - arm_cortex-a15_neon-vfpv4
+          - mips_24kc
+          - mips_mips32
+          - mipsel_24kc
+          - mipsel_24kc_24kf
+          - mipsel_74kc
+          - mipsel_mips32
+          - riscv64_riscv64
 
-
-          # APK Targets (Snapshots)
-          - name: x86_64-SNAPSHOT
-            arch: x86_64
-            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/x86/64/"
-            sdk_tar: "SNAPSDK.tar.zst"
-            sdk_dir: "SNAPSDK"
-            package_type: "apk"
-          - name: rockchip-SNAPSHOT
-            arch: aarch64_generic
-            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/rockchip/armv8/"
-            sdk_tar: "SNAPSDK.tar.zst"
-            sdk_dir: "SNAPSDK"
-            package_type: "apk"
-          - name: armv7-SNAPSHOT
-            arch: arm_cortex-a7
-            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/sunxi/cortexa7/"
-            sdk_tar: "SNAPSDK.tar.zst"
-            sdk_dir: "SNAPSDK"
-            package_type: "apk"
-          - name: mips-SNAPSHOT
-            arch: mips_24kc
-            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/ath79/generic/"
-            sdk_tar: "SNAPSDK.tar.zst"
-            sdk_dir: "SNAPSDK"
-            package_type: "apk"
-          - name: mipsel-SNAPSHOT
-            arch: mipsel_24kc
-            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/ramips/mt76x8/"
-            sdk_tar: "SNAPSDK.tar.zst"
-            sdk_dir: "SNAPSDK"
-            package_type: "apk"
-          - name: riscv64-SNAPSHOT
-            arch: riscv64
-            sdk_url: "https://downloads.immortalwrt.org/snapshots/targets/sifiveu/generic/"
-            sdk_tar: "SNAPSDK.tar.zst"
-            sdk_dir: "SNAPSDK"
-            package_type: "apk"
+        sdk:
+          - "24.10.4" # For IPK
+          - "SNAPSHOT" # For APK
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-      - name: Install Dependencies
+      - name: Build
+        uses: openwrt/gh-action-sdk@v9
         env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install curl git tar zstd python3 python3-pyelftools python3-setuptools aria2
-
-      - name: Download SDK
-        run: |
-          mkdir -p tmp
-          BASE_URL="${{ matrix.target.sdk_url }}"
-          echo "Fetching SDK from $BASE_URL"
-          
-          # Find the SDK filename dynamically
-          SDK_FILE=$(curl -s "$BASE_URL" | grep -oE 'immortalwrt-sdk-[^"]+\.tar\.(xz|zst)' | head -n 1)
-          
-          if [ -z "$SDK_FILE" ]; then
-             echo "Failed to find SDK file in $BASE_URL"
-             SDK_FILE=$(curl -s "$BASE_URL" | grep -oE 'openwrt-sdk-[^"]+\.tar\.(xz|zst)' | head -n 1)
-          fi
-          
-          if [ -z "$SDK_FILE" ]; then
-             echo "Could not detect SDK filename."
-             exit 1
-          fi
-
-          echo "Detected SDK File: $SDK_FILE"
-          
-          if ! curl -SLk --connect-timeout 30 --retry 2 "$BASE_URL/$SDK_FILE" -o "./tmp/${{ matrix.target.sdk_tar }}"; then
-              echo "Failed to download SDK"
-              exit 1
-          fi
-            
-          cd tmp
-          if [[ "${{ matrix.target.sdk_tar }}" == *.tar.zst ]]; then
-             zstd -d ${{ matrix.target.sdk_tar }}
-             tar xf $(basename ${{ matrix.target.sdk_tar }} .zst)
-          else
-             tar xJf ${{ matrix.target.sdk_tar }}
-          fi
-          
-          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "*sdk*" | head -n 1)
-          mv "$EXTRACTED_DIR" ${{ matrix.target.sdk_dir }}
-
-      - name: Prepare Feeds
-        run: |
-          cd tmp/${{ matrix.target.sdk_dir }}
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-
-      - name: Copy Source Code
-        run: |
-          SDK_ROOT="tmp/${{ matrix.target.sdk_dir }}"
-          mkdir -p $SDK_ROOT/package/rtp2httpd
-          mkdir -p $SDK_ROOT/package/luci-app-rtp2httpd
-          
-          cp -rf ./rtp2httpd/. $SDK_ROOT/package/rtp2httpd/
-          cp -rf ./luci-app-rtp2httpd/. $SDK_ROOT/package/luci-app-rtp2httpd/
-
-      - name: Configure and Compile
-        run: |
-          cd tmp/${{ matrix.target.sdk_dir }}
-          make defconfig
-          
-          if [ "${{ matrix.target.package_type }}" = "apk" ]; then
-             echo "CONFIG_PACKAGE_apk=y" >> .config
-             make defconfig
-          fi
-          
-          echo "Compiling luci-app-rtp2httpd..."
-          make package/luci-app-rtp2httpd/compile -j$(nproc) || make package/luci-app-rtp2httpd/compile V=s
+          ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
+          NO_SHFMT_CHECK: true
+          PACKAGES: rtp2httpd luci-app-rtp2httpd
+          V: sc
 
       - name: Prepare Artifacts
         run: |
-          tag_name="${{  matrix.target.name }}"
-          mkdir -p "$tag_name"
-          find tmp/${{ matrix.target.sdk_dir }}/bin/packages/ -name "*rtp2httpd*.${{ matrix.target.package_type }}" -exec cp {} "$tag_name"/ \;
-          tar -czvf "$tag_name.tar.gz" -C "$tag_name" .
-          rm -rf "$tag_name"
+          mkdir -p bin/artifacts
+          
+          # Copy IPK files
+          if ls bin/packages/${{ matrix.arch }}/action/*.ipk 1> /dev/null 2>&1; then
+            cp bin/packages/${{ matrix.arch }}/action/*.ipk bin/artifacts/
+          fi
+
+          # Rename and Copy APK files
+          if ls bin/packages/${{ matrix.arch }}/action/*.apk 1> /dev/null 2>&1; then
+            for apk_file in bin/packages/${{ matrix.arch }}/action/*.apk; do
+              filename=$(basename "$apk_file")
+              if [[ "$filename" == luci-* ]]; then
+                 cp "$apk_file" "bin/artifacts/$filename"
+              else
+                 new_filename="${filename%.apk}_${{ matrix.arch }}.apk"
+                 cp "$apk_file" "bin/artifacts/$new_filename"
+              fi
+            done
+          fi
+
+          # Create tar.gz archive
+          cd bin/artifacts
+          TAR_NAME="rtp2httpd-${{ matrix.arch }}-${{ matrix.sdk }}.tar.gz"
+          tar -czvf "$TAR_NAME" *
+          
+          # Clean up everything except the tarball
+          mkdir -p ../upload
+          mv "$TAR_NAME" ../upload/
+          cd ..
+          rm -rf artifacts
+          mv upload artifacts
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target.name }}
-          path: ${{ matrix.target.name }}.tar.gz
-          if-no-files-found: error
+          name: package-${{ matrix.arch }}-${{ matrix.sdk }}
+          path: bin/artifacts/*
+          if-no-files-found: ignore
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') == false
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Get Version
-        id: version
-        run: |
-          VERSION=$(grep '^PKG_VERSION:=' rtp2httpd/Makefile | cut -d= -f2)
-          echo "PKG_VERSION=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          tag_name: "v${{ steps.version.outputs.PKG_VERSION }}"
-          name: "v${{ steps.version.outputs.PKG_VERSION }}"
-          body: |
-            rtp2httpd OpenWrt Packages
-            
-            Version: ${{ steps.version.outputs.PKG_VERSION }}
-          draft: false
-          prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
