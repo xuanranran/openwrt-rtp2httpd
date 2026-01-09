@@ -67,35 +67,46 @@ jobs:
         run: |
           mkdir -p bin/artifacts
           
-          # Copy IPK files
-          if ls bin/packages/${{ matrix.arch }}/action/*.ipk 1> /dev/null 2>&1; then
-            cp bin/packages/${{ matrix.arch }}/action/*.ipk bin/artifacts/
-          fi
-
-          # Rename and Copy APK files
-          if ls bin/packages/${{ matrix.arch }}/action/*.apk 1> /dev/null 2>&1; then
-            for apk_file in bin/packages/${{ matrix.arch }}/action/*.apk; do
+          echo "Finding packages..."
+          # Use find to locate packages, handling potential path variations
+          find bin/packages/ -type f -name "*.ipk" -exec cp {} bin/artifacts/ \; 2>/dev/null || true
+          find bin/packages/ -type f -name "*.apk" -exec cp {} bin/artifacts/ \; 2>/dev/null || true
+          
+          # Rename apk files if needed (append arch)
+          cd bin/artifacts
+          if ls *.apk 1> /dev/null 2>&1; then
+            for apk_file in *.apk; do
               filename=$(basename "$apk_file")
-              if [[ "$filename" == luci-* ]]; then
-                 cp "$apk_file" "bin/artifacts/$filename"
-              else
-                 new_filename="${filename%.apk}_${{ matrix.arch }}.apk"
-                 cp "$apk_file" "bin/artifacts/$new_filename"
+              # Skip already renamed or luci files (luci files are usually 'all' arch)
+              if [[ "$filename" == luci-* ]] || [[ "$filename" == *_${{ matrix.arch }}.apk ]]; then
+                 continue
               fi
+              
+              # Append arch to filename
+              new_filename="${filename%.apk}_${{ matrix.arch }}.apk"
+              mv "$apk_file" "$new_filename"
             done
+          fi
+          
+          # Check if we have any files to compress
+          if [ -z "$(ls -A .)" ]; then
+             echo "::error::No packages found in bin/packages/! Listing bin directory for debug:"
+             cd ../..
+             ls -R bin/
+             exit 1
           fi
 
           # Create tar.gz archive
-          cd bin/artifacts
           TAR_NAME="rtp2httpd-${{ matrix.arch }}-${{ matrix.sdk }}.tar.gz"
           tar -czvf "$TAR_NAME" *
           
-          # Clean up everything except the tarball
-          mkdir -p ../upload
-          mv "$TAR_NAME" ../upload/
-          cd ..
-          rm -rf artifacts
-          mv upload artifacts
+          # Clean up
+          mkdir -p ../../upload
+          mv "$TAR_NAME" ../../upload/
+          cd ../..
+          rm -rf bin/artifacts
+          mkdir -p bin/artifacts
+          mv upload/* bin/artifacts/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
