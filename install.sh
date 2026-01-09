@@ -153,7 +153,7 @@ check_installed() {
 
     if [ "$PKG_MANAGER" = "apk" ]; then
         if apk info -e rtp2httpd >/dev/null 2>&1; then
-            installed_version=$(apk info rtp2httpd | grep "^rtp2httpd-" | sed 's/rtp2httpd-//' | awk '{print $1}')
+            installed_version=$(apk info rtp2httpd 2>/dev/null | grep "^rtp2httpd-" | sed 's/rtp2httpd-//' | awk '{print $1}')
         fi
     else
         if opkg list-installed | grep -q "^rtp2httpd "; then
