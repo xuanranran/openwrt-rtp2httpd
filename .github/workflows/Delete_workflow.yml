@@ -8,6 +8,10 @@ concurrency:
   # 自动取消其他运行中的workflow
   cancel-in-progress: true
 
+permissions:
+  actions: write
+  contents: write
+
 jobs:
   Build:
     runs-on: ubuntu-latest
