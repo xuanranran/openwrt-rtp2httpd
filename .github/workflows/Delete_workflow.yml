@@ -3,6 +3,8 @@ name: Delete workflow
 on:
   repository_dispatch:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
   # 自动取消其他运行中的workflow
