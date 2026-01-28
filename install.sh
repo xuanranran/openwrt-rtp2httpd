@@ -72,7 +72,7 @@ select_github_mirror() {
     case "$choice" in
         1)
             print_info "使用 gh-proxy.com 镜像加速"
-            GITHUB_API="https://gh-proxy.com/https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
+            GITHUB_API="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
             GITHUB_RELEASE="https://gh-proxy.com/https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download"
             GITHUB_RAW="https://gh-proxy.com/https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}"
             ;;
@@ -84,7 +84,7 @@ select_github_mirror() {
             ;;
         *)
             print_warn "无效选项，使用默认方式: gh-proxy.com 镜像加速"
-            GITHUB_API="https://gh-proxy.com/https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
+            GITHUB_API="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
             GITHUB_RELEASE="https://gh-proxy.com/https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download"
             GITHUB_RAW="https://gh-proxy.com/https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}"
             ;;
