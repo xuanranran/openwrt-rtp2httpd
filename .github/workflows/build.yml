@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') == false && github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/') == false && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         with:
           tag_name: "v${{ steps.version.outputs.PKG_VERSION }}"
           name: "v${{ steps.version.outputs.PKG_VERSION }}"

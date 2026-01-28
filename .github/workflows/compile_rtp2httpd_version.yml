@@ -144,4 +144,4 @@ jobs:
         if: steps.check.outputs.update_needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run build.yml
+        run: gh workflow run build.yml --ref ${{ github.ref }}
