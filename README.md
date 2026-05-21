@@ -1,6 +1,6 @@
 # luci-app-rtp2httpd
 
-![GitHub Release](https://img.shields.io/github/v/release/xuanranran/openwrt-rtp2httpd)
+[![GitHub Release](https://badgen.net/github/release/xuanranran/openwrt-rtp2httpd/stable)](https://github.com/xuanranran/openwrt-rtp2httpd/releases)
 
 🎥 Convert RTP/UDP/RTSP streams into HTTP streams with FCC support for OpenWrt.
 
